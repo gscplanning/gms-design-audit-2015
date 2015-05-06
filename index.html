@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>GMS Design Audit, 2015</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<link rel="icon" type="image/png" href="http://i1368.photobucket.com/albums/ag172/gscplanning/logo-favicon_zpsagngw6so.png" />
+	<link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css" />
+	<link rel="stylesheet" href="lib/cluster/MarkerCluster.css" />	
+	<link rel="stylesheet" href="lib/leaflet-photo/Leaflet.Photo.css" />	
+	<link rel="stylesheet" href="css/map.css" />
+</head>
+<body>
+	<div id="map"></div>
+	<script src="lib/reqwest.min.js"></script>
+	<script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
+	<script src="lib/cluster/leaflet.markercluster.js"></script>	
+	<script src="lib/leaflet-photo/Leaflet.Photo.js"></script>	
+	<script>
+
+	var map = L.map('map', {
+		maxZoom: 20
+	});
+
+	L.tileLayer('http://{s}.{base}.maps.cit.api.here.com/maptile/2.1/maptile/{mapID}/hybrid.day/{z}/{x}/{y}/256/png8?app_id={app_id}&app_code={app_code}', {
+		attribution: 'Map &copy; 1987-2014 <a href="http://developer.here.com">HERE</a>',
+		subdomains: '1234',
+		mapID: 'newest',
+		app_id: 'kSD7AyOuZmGOiJ0fkO96',
+		app_code: 'wbu-6TuKS_Z_bnMVg7m8Vg',
+		base: 'aerial',
+		maxZoom: 20
+	}).addTo(map);
+
+	var photoLayer = L.photo.cluster().on('click', function (evt) {
+		var photo = evt.layer.photo,
+			template = '<img src="{url}"/></a><p>{caption}</p>';
+
+		if (photo.video && (!!document.createElement('video').canPlayType('video/mp4; codecs=avc1.42E01E,mp4a.40.2'))) {
+			template = '<video autoplay controls poster="{url}"><source src="{video}" type="video/mp4"/></video>';
+		}; 
+
+		evt.layer.bindPopup(L.Util.template(template, photo), {
+			className: 'leaflet-popup-photo',
+			minWidth: 400
+		}).openPopup();
+	});
+
+	reqwest({
+		url: 'https://picasaweb.google.com/data/feed/api/user/103928097371158548663/albumid/6145801880968168929?alt=json-in-script',
+		type: 'jsonp',
+		success: function (data) {
+			var photos = [];
+			data = data.feed.entry;
+
+			for (var i = 0; i < data.length; i++) {
+				var photo = data[i];
+				if (photo['georss$where']) {
+					var pos = photo['georss$where']['gml$Point']['gml$pos']['$t'].split(' ');
+					photos.push({
+						lat: pos[0],
+						lng: pos[1],
+						url: photo['media$group']['media$content'][0].url,
+						caption: photo['media$group']['media$description']['$t'],
+						thumbnail: photo['media$group']['media$thumbnail'][0].url,
+						video: (photo['media$group']['media$content'][1] ? photo['media$group']['media$content'][1].url : null) 
+					});
+				};
+			}
+			
+			photoLayer.add(photos).addTo(map);
+			map.fitBounds(photoLayer.getBounds());
+		}
+	});
+
+	</script>
+</body>
+</html>
